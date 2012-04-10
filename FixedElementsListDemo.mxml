@@ -12,9 +12,13 @@
 	
 	<fx:Declarations>
 		
-		<fx:Array id="fixedElements">
+		<fx:Array id="actualFixedElements">
 			<fx:Object value="-1" label="(None)"/>
 			<fx:Object value="-2" label="(All)"/>
+		</fx:Array>
+		
+		<fx:Array id="fixedElements">
+			<!-- initially empty array -->
 		</fx:Array>
 		
 		<s:ArrayList id="originalList">
@@ -37,6 +41,8 @@
 	<s:DropDownList id="dropdown" width="100%" dataProvider="{fixedElementsList}"/>
 	
 	<s:Button label="Show selected item" click="Alert.show(dropdown.selectedItem.value)"/>
+	
+	<s:Button label="Prepare fixed elements" click="fixedElements = actualFixedElements"/>
 	
 	<s:Button label="Clear source list" click="originalList.removeAll()"/>
 	<s:Button label="Add item to source list (at the end)" click="originalList.addItem({value: '4', label: 'Fourth'})"/>

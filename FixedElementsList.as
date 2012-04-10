@@ -8,7 +8,7 @@ package {
 	import mx.events.CollectionEventKind;
 	
 	/**
-	 * TODO document class behavior...
+	 * Wrap a source IList instance, mantaining a set of provided fixed elements added to it.
 	 */
 	public class FixedElementsList extends EventDispatcher implements IList {
 		
@@ -20,7 +20,7 @@ package {
 				source = new ArrayList();
 			}
 			_source = source;
-			_source.addEventListener(CollectionEvent.COLLECTION_CHANGE, onsourceCollectionChange);
+			_source.addEventListener(CollectionEvent.COLLECTION_CHANGE, onSourceCollectionChange);
 		}
 		
 		
@@ -44,13 +44,13 @@ package {
 		 */
 		public function set source(value:IList):void {
 			if (_source != null) {
-				_source.removeEventListener(CollectionEvent.COLLECTION_CHANGE, onsourceCollectionChange);
+				_source.removeEventListener(CollectionEvent.COLLECTION_CHANGE, onSourceCollectionChange);
 			}
 			_source = value;
 			if (_source == null) {
 				_source = new ArrayList();
 			}
-			_source.addEventListener(CollectionEvent.COLLECTION_CHANGE, onsourceCollectionChange);
+			_source.addEventListener(CollectionEvent.COLLECTION_CHANGE, onSourceCollectionChange);
 			dispatchEvent(new CollectionEvent(CollectionEvent.COLLECTION_CHANGE, false, false, CollectionEventKind.RESET));
 		}
 		
@@ -68,17 +68,15 @@ package {
 		 */
 		[Bindable]
 		public function get fixedElements():Array {
-			return _fixedElements;
+			// return a shallow-copied array to avoid unwanted side effects
+			return _fixedElements.concat();
 		}
 		
 		/**
 		 * @private
 		 */
 		public function set fixedElements(value:Array):void {
-			if (value == null) {
-				throw new ArgumentError("Fixed elements cannot be null.");
-			}
-			_fixedElements = value;
+			_fixedElements = value ? value.concat() : []; // use a shallow copy to avoid unwanted side effects 
 			dispatchEvent(new CollectionEvent(CollectionEvent.COLLECTION_CHANGE, false, false, CollectionEventKind.RESET));
 		}
 		
@@ -87,10 +85,23 @@ package {
 		
 		/**
 		 * @private
+		 * Listen for collection events on the source list, and dispatch a new collection event
+		 * of the same type trying to realign the positions taking into consideration our fixed elements.
 		 */
-		protected function onsourceCollectionChange(event:CollectionEvent):void {
-			dispatchEvent(new CollectionEvent(event.type, event.bubbles, event.cancelable,
-				event.kind, event.location + _fixedElements.length, event.location + _fixedElements.length, event.items));
+		protected function onSourceCollectionChange(event:CollectionEvent):void {
+			var newEvent:CollectionEvent = new CollectionEvent(event.type, event.bubbles, event.cancelable, event.kind)
+			if (event.location >= 0) {
+				newEvent.location = event.location + (_fixedElements != null ? _fixedElements.length : 0);
+			} else {
+				newEvent.location = event.location;
+			}
+			if (event.oldLocation >= 0) {
+				newEvent.oldLocation = event.oldLocation + (_fixedElements != null ? _fixedElements.length : 0);
+			} else {
+				newEvent.oldLocation = event.oldLocation;
+			}
+			newEvent.items = event.items;
+			dispatchEvent(newEvent);
 		}
 		
 		
@@ -101,7 +112,7 @@ package {
 		 */
 		[Bindable(event="collectionChange")]
 		public function get length():int {
-			return _source.length + _fixedElements.length;
+			return _source.length + (_fixedElements != null ? _fixedElements.length : 0);
 		}
 		
 		/**
@@ -116,20 +127,20 @@ package {
 		 */
 		public function addItemAt(item:Object, index:int):void {
 			// fixed items are always presented on top, so throw an error if index is not valid
-			if (index < _fixedElements.length) {
+			if (fixedElements != null && index < _fixedElements.length) {
 				throw new ArgumentError("Index out of bound: cannot insert element in the fixed elements section.");
 			}
-			_source.addItemAt(item, index - _fixedElements.length);
+			_source.addItemAt(item, index - (_fixedElements != null ? _fixedElements.length : 0));
 		}
 		
 		/**
 		 * @copy mx.collections.IList#getItemAt
 		 */
 		public function getItemAt(index:int, prefetch:int=0):Object {
-			if (index < _fixedElements.length) {
+			if (_fixedElements != null && index < _fixedElements.length) {
 				return _fixedElements[index];
 			} else {
-				return _source.getItemAt(index - _fixedElements.length, prefetch);
+				return _source.getItemAt(index - (_fixedElements != null ? _fixedElements.length : 0), prefetch);
 			}
 		}
 		
@@ -140,9 +151,11 @@ package {
 			// priority to non-fixed items
 			var index:int = _source.getItemIndex(item);
 			if (index >= 0) {
-				return index;
-			} else {
+				return index + (_fixedElements != null ? _fixedElements.length : 0);
+			} else if (_fixedElements != null) {
 				return _fixedElements.indexOf(item);
+			} else {
+				return -1;
 			}
 		}
 		
@@ -166,27 +179,31 @@ package {
 		 * @copy mx.collections.IList#removeItemAt 
 		 */
 		public function removeItemAt(index:int):Object {
-			if (index < _fixedElements.length) {
+			if (_fixedElements != null && index < _fixedElements.length) {
 				throw new ArgumentError("Index out of bound: cannot remove elements in the fixed elements section.");
 			}
-			return _source.removeItemAt(index - _fixedElements.length);
+			return _source.removeItemAt(index - (_fixedElements != null ? _fixedElements.length : 0));
 		}
 		
 		/**
 		 * @copy mx.collections.IList#setItemAt 
 		 */
 		public function setItemAt(item:Object, index:int):Object {
-			if (index < _fixedElements.length) {
+			if (_fixedElements != null && index < _fixedElements.length) {
 				throw new ArgumentError("Index out of bound: cannot updated elements in the fixed elements section.");
 			}
-			return _source.setItemAt(item, index - _fixedElements.length);
+			return _source.setItemAt(item, index - (_fixedElements != null ? _fixedElements.length : 0));
 		}
 		
 		/**
 		 * @copy mx.collections.IList#toArray 
 		 */
 		public function toArray():Array {
-			return _fixedElements.toArray().concat(_source.toArray());
+			if (_fixedElements != null) {
+				return _fixedElements.concat(_source.toArray());
+			} else {
+				return source.toArray();
+			}
 		}
 		
 	}
