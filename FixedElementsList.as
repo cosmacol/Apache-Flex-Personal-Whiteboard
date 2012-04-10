@@ -16,11 +16,7 @@ package {
 		 * Constructor.
 		 */
 		public function FixedElementsList(source:IList = null) {
-			if (source == null) {
-				source = new ArrayList();
-			}
-			_source = source;
-			_source.addEventListener(CollectionEvent.COLLECTION_CHANGE, onSourceCollectionChange);
+			this.source = source;
 		}
 		
 		
