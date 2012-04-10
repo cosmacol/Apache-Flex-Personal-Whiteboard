@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication
+	xmlns:fx="http://ns.adobe.com/mxml/2009"
+	xmlns:s="library://ns.adobe.com/flex/spark" 
+	xmlns:mx="library://ns.adobe.com/flex/mx"
+	xmlns:local="*">
+	<fx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		
+		<fx:Array id="fixedElements">
+			<fx:Object value="-1" label="(None)"/>
+			<fx:Object value="-2" label="(All)"/>
+		</fx:Array>
+		
+		<s:ArrayList id="originalList">
+			<fx:Object value="0" label="1st item"/>
+			<fx:Object value="1" label="2nd item"/>
+			<fx:Object value="3" label="3rd item"/>
+		</s:ArrayList>
+		
+		<local:FixedElementsList
+			id="fixedElementsList"
+			source="{originalList}"
+			fixedElements="{fixedElements}"/>
+		
+	</fx:Declarations>
+	
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<s:DropDownList id="dropdown" width="100%" dataProvider="{fixedElementsList}"/>
+	
+	<s:Button label="Show selected item" click="Alert.show(dropdown.selectedItem.value)"/>
+	
+	<s:Button label="Clear source list" click="originalList.removeAll()"/>
+	<s:Button label="Add item to source list (at the end)" click="originalList.addItem({value: '4', label: 'Fourth'})"/>
+	<s:Button label="Assign source list reference to another instance" click="originalList = new ArrayList([{value: '4', label: '4th'}])"/>
+	
+</s:WindowedApplication>
